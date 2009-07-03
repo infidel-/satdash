@@ -1,10 +1,8 @@
 '''
 TODO:
-- untie speed from fps
 - high scores
 
 - combos!
-- background picture
 - explosion animation (first check about general animation)
 - asteroid animation (rotation)
 - game: where player must move objects away from each other so that
@@ -14,56 +12,15 @@ they don't collide
 import sys, pygame, random, math
 from pygame.locals import *
 from random import *
-import Animation
-from Animation import *
+import Lib
+from Lib import *
+import Config
+from Config import config
+
 
 # constants
 
-# play music?
-PLAY_MUSIC = 0
 
-# play sound?
-PLAY_SOUND = 0
-
-# fps limit
-FPS = 60
-
-# screen dimensions
-SCREEN_WIDTH = 320
-SCREEN_HEIGHT = 240
-
-# starting time and level
-START_TIME = 30000
-START_LEVEL = 1
-
-# object speed
-OBJECT_SPEED = 5.0
-
-# grabbed object speed
-MAX_OBJECT_SPEED = 15.0
-
-# satellite life
-SATELLITE_LIFE = 3
-
-# time of explosion particle (msec)
-EXPLOSION_TIME = 500
-
-# grabbing time (msec)
-GRAB_TIME = 100000
-
-# object invulnerability length after collision (msec)
-COLLISION_TIMEOUT = 150
-
-# show direction of satellite movement
-SHOW_DIR = False
-
-# how much points and time is given for one collision
-LEVEL_POINTS = (0, 10, 50, 100, 250, 500, 1000, 2500, 5000, 10000, \
-    50000, 100000, 500000, 999999)
-LEVEL_TIME = (2000, 1800, 1600, 1400, 1200, 1000, 750, 500, 300, 250, 200, 100, \
-              90, 80, 70, 60, 50, 40, 30)
-
-global settings
 global assets
 global objects
 global particles
@@ -71,9 +28,6 @@ global game
 
 # game parameters
 game = None
-
-# hash of all settings
-settings = dict()
 
 # hash of all assets
 assets = dict()
@@ -85,7 +39,6 @@ objects = list()
 particles = list()
 
 
-settings['playMusic'] = 1
 
 
 # cursor class (ccur)
@@ -134,7 +87,7 @@ class Cursor:
     # update state
     def update(self, ticks):
         # check for grab release
-        if self.isPressed and ticks - self.startTime > GRAB_TIME:
+        if self.isPressed and ticks - self.startTime > config['grabTime']:
             self.setPressed(0)
             self.grabbed = None;
 
@@ -152,8 +105,8 @@ class Cursor:
             fdx = 0
             fdy = 0
             if m > 0:
-                fdx = MAX_OBJECT_SPEED * float(dx) / float(m)
-                fdy = MAX_OBJECT_SPEED * float(dy) / float(m)
+                fdx = config['maxObjectSpeed'] * float(dx) / float(m)
+                fdy = config['maxObjectSpeed'] * float(dy) / float(m)
 
 #            print 'd:', dx, dy, 'f:', fdx, fdy, ' m:', m
 
@@ -173,10 +126,7 @@ pass
 
 
 # world object class (cwo) - satellites, debris, etc
-class WorldObject:
-    rect = None
-    image = None
-
+class WorldObject(Animation):
     # object type
     type = ''
 
@@ -210,34 +160,38 @@ class WorldObject:
 
         if self.type == 'satellite':
             self.image = assets['satellite']
-            self.life = SATELLITE_LIFE
+            self.life = config['satelliteLife']
 
         elif self.type == 'debris':
             self.image = assets['rock']
+            self.numFrames = 1
             self.life = 1
 
         # check for collision
         while 1:
             # spawn objects on screen edges during the game
             if not onEdge:
-                x = randint(0, SCREEN_WIDTH)
-                y = randint(0, SCREEN_HEIGHT)
+                x = randint(0, config['screenWidth'])
+                y = randint(0, config['screenHeight'])
             else:
-                x = randint(0, SCREEN_WIDTH)
-                y = randint(0, SCREEN_HEIGHT)
+                x = randint(0, config['screenWidth'])
+                y = randint(0, config['screenHeight'])
 
                 if random() > 0.5:
                     if random() > 0.5:
                         x = 0
                     else:
-                        x = SCREEN_WIDTH - 1
+                        x = config['screenWidth'] - 1
                 else:
                     if random() > 0.5:
                         y = 0
                     else:
-                        y = SCREEN_HEIGHT - 1
+                        y = config['screenHeight'] - 1
 
             r = self.image.get_rect()
+            if (self.numFrames > 1):
+                r.width = 32
+                r.height = 32
             self.__dict__['rect'] = Rect(x, y, r.width, r.height)
 
             ok = 1
@@ -250,8 +204,8 @@ class WorldObject:
                 break
         pass
 
-        self.__dict__['dirx'] = OBJECT_SPEED * random() - 1
-        self.__dict__['diry'] = OBJECT_SPEED * random() - 1
+        self.__dict__['dirx'] = config['objectSpeed'] * random() - 1
+        self.__dict__['diry'] = config['objectSpeed'] * random() - 1
 
         self.__dict__['fx'] = self.rect.centerx
         self.__dict__['fy'] = self.rect.centery
@@ -274,12 +228,11 @@ class WorldObject:
 
 
     # paint this (cwop)
-    def paint(self):
-        # show object image
-        screen.blit(self.image, self.rect)
-
+    def paint(self, screen):
+        Animation.paint(self, screen)
+        
         # show satellite movement direction
-        if self.type == 'satellite' and SHOW_DIR:
+        if self.type == 'satellite' and config['debugShowDir']:
             r = Rect(self.rect.left, self.rect.top, 15, 15)
             r.centerx += 32 + self.dx * 10
             r.centery += 32 + self.dy * 10
@@ -306,7 +259,7 @@ class WorldObject:
         if self.rect.colliderect(rect):
             cursor.grabbed = self
             self.isTouched = 1
-            if PLAY_SOUND:
+            if config['playSound']:
                 assets['sndGrab'].stop()
                 assets['sndGrab'].play()
 
@@ -325,9 +278,9 @@ class WorldObject:
         img = ''
         if self.type == 'satellite':
             img = 'satellite'
-            if self.life == SATELLITE_LIFE - 1:
+            if self.life == config['satelliteLife'] - 1:
                 img = 'satelliteDamaged1'
-            elif self.life == SATELLITE_LIFE - 2:
+            elif self.life == config['satelliteLife'] - 2:
                 img = 'satelliteDamaged2'
 
         elif self.type == 'debris':
@@ -386,7 +339,7 @@ class WorldObject:
         o.damage(self, 1)
 
         # play appropriate sound
-        if PLAY_SOUND:
+        if config['playSound']:
             if self.isDead or o.isDead:
                 assets['sndExplosion'].play()
             else:
@@ -428,7 +381,7 @@ class WorldObject:
         msec = ticks - prevTicks
 
         # remove collision timeout
-        if self.isCollided and ticks - self.collideTime > COLLISION_TIMEOUT:
+        if self.isCollided and ticks - self.collideTime > config['collisionTimeout']:
             self.isCollided = 0
 
         # slightly randomize movement
@@ -437,13 +390,13 @@ class WorldObject:
 
         # correct movement speed if not grabbed
         if cursor.grabbed != self and \
-           math.hypot(self.dirx, self.diry) > OBJECT_SPEED:
+           math.hypot(self.dirx, self.diry) > config['objectSpeed']:
             # normalize to speed
             m = max(abs(self.dirx), abs(self.diry))
             self.dirx /= m
             self.diry /= m
-            self.dirx *= OBJECT_SPEED
-            self.diry *= OBJECT_SPEED
+            self.dirx *= config['objectSpeed']
+            self.diry *= config['objectSpeed']
 
         # change slightly delta to dir
         self.dx += (self.dirx - self.dx) / 10.0
@@ -454,14 +407,14 @@ class WorldObject:
         self.fy += 3 * float(self.dy) / float(msec)
 
         # check boundaries
-        if self.fx >= SCREEN_WIDTH:
+        if self.fx >= config['screenWidth']:
             self.fx = 1
         if self.fx <= 0:
-            self.fx = SCREEN_WIDTH - 1
-        if self.fy >= SCREEN_HEIGHT:
+            self.fx = config['screenWidth'] - 1
+        if self.fy >= config['screenHeight']:
             self.fy = 1
         if self.fy <= 0:
-            self.fy = SCREEN_HEIGHT - 1
+            self.fy = config['screenHeight'] - 1
     pass
 pass
 
@@ -543,7 +496,7 @@ class Particle:
         global particles
         
         # remove explosion on timeout
-        if ticks - self.startTime > EXPLOSION_TIME:
+        if ticks - self.startTime > config['explosionTime']:
             particles.remove(self)
 
         if self.isTrail:
@@ -571,10 +524,10 @@ pass
 # main game class (cgam)
 class Game:
     points = 0
-    level = START_LEVEL
+    level = config['startLevel']
     numSatellites = 0
     numDebris = 0
-    time = START_TIME
+    time = config['startTime']
     warnStartTime = 0
 
     isPaused = False
@@ -621,7 +574,7 @@ class Game:
 
     # add points, raise level if needed
     def addPoints(self, points):
-        time = LEVEL_TIME[self.level]
+        time = config['levelTime'][self.level]
         if points == 1 and self.level > 1:
             time /= 4.0
 
@@ -631,7 +584,7 @@ class Game:
 
         # check for new level
         newLevel = 0
-        for l in LEVEL_POINTS:
+        for l in config['levelPoints']:
             if self.points >= l:
                 newLevel += 1
         pass    
@@ -646,7 +599,7 @@ class Game:
         self.numSatellites = 2 + self.level / 2
 
         # play sound
-        if PLAY_SOUND:
+        if config['playSound']:
             assets['sndLevel'].play()
 
 #        print 'l:', self.level, 'sats:', self.numSatellites, 'debris:',\
@@ -675,7 +628,7 @@ class Game:
         # warning sound when time is low
         if self.time <= 5000 and ticks - self.warnStartTime > 500:
             self.warnStartTime = ticks
-            if PLAY_SOUND:
+            if config['playSound']:
                 assets['sndTime'].play()
 
         # check for finish
@@ -717,6 +670,7 @@ def loadAssets():
     global assets
 
     # images
+    assets['bg'] = pygame.image.load("assets/bg.png")
     assets['cursorNormal'] = pygame.image.load("assets/cursor.png")
     assets['cursorPressed'] = pygame.image.load("assets/cursor_pressed.png")
     assets['dir'] = pygame.image.load("assets/dir.png")
@@ -729,7 +683,7 @@ def loadAssets():
     assets['rock'] = pygame.image.load("assets/rock.png")
 
     # sounds
-    if PLAY_SOUND:
+    if config['playSound']:
         assets['sndExplosion'] = pygame.mixer.Sound("assets/snd_explosion.ogg")
         assets['sndGrab'] = pygame.mixer.Sound("assets/snd_grab.ogg")
         assets['sndHit'] = pygame.mixer.Sound("assets/snd_hit.ogg")
@@ -742,11 +696,13 @@ pass
 def handleEvents():
     for e in pygame.event.get():
         if e.type == pygame.QUIT:
+            pygame.quit()
             sys.exit()
 
         elif e.type == pygame.KEYDOWN:
             # esc exits game
             if e.key == K_ESCAPE:
+                pygame.quit()
                 sys.exit()
 
             if e.key == K_SPACE:
@@ -792,7 +748,7 @@ def paintStatus():
     size = font.size(text)
     
     surf = font.render(text, 1, (255, 255, 255, 0));
-    r = Rect(10, SCREEN_HEIGHT - size[1] - 5, size[0], size[1])
+    r = Rect(10, config['screenHeight'] - size[1] - 5, size[0], size[1])
     screen.blit(surf, r)
 pass
 
@@ -801,11 +757,11 @@ pass
 def paintScreen():
     # paint objects
     for o in objects:
-        o.paint()
+        o.paint(screen)
 
     # paint grabbed satellite
     if cursor.grabbed != None:
-        cursor.grabbed.paint()
+        cursor.grabbed.paint(screen)
 
     # paint particles
     for e in reversed(particles):
@@ -845,8 +801,8 @@ def introText(fontIntro, textList):
     for text in textList:
         size = fontIntro.size(text)
         surf = fontIntro.render(text, 1, (255, 255, 255, 0));
-        r = Rect((SCREEN_WIDTH - size[0]) / 2, \
-                 (SCREEN_HEIGHT - size[1] - totalHeight + height * cnt) / 2, \
+        r = Rect((config['screenWidth'] - size[0]) / 2, \
+                 (config['screenHeight'] - size[1] - totalHeight + height * cnt) / 2, \
                  size[0], size[1])
         screen.blit(surf, r)
 
@@ -863,11 +819,11 @@ pass
 # intro
 def playIntro():
     # intro music
-    if PLAY_MUSIC:
+    if config['playMusic']:
         pygame.mixer.music.load("assets/mus_intro.ogg")
         pygame.mixer.music.play(-1)
 
-    fontIntro = pygame.font.Font('freesansbold.ttf', 30)
+    fontIntro = pygame.font.Font('freesansbold.ttf', 10)
     introText(fontIntro, 
               ("UFOdeath v0.1", 
                    "Press and hold LEFT MOUSE BUTTON to grab satellites",
@@ -875,7 +831,7 @@ def playIntro():
                    "Press SPACE to pause game"))
 
     # ingame music
-    if PLAY_MUSIC:
+    if config['playMusic']:
         pygame.mixer.music.load("assets/mus_ingame.ogg")
         pygame.mixer.music.play(-1)
 pass
@@ -887,7 +843,7 @@ def playOutro():
     pygame.mixer.music.load("assets/mus_intro.ogg")
     pygame.mixer.music.play(-1)
 
-    fontOutro = pygame.font.Font('freesansbold.ttf', 30)
+    fontOutro = pygame.font.Font('freesansbold.ttf', 10)
     introText(fontOutro,
               ("GAME OVER",
                "Score: " + str(game.points)))
@@ -902,13 +858,15 @@ pygame.mixer.pre_init(44100, 16, 2, 2048)
 pygame.init()
 pygame.mouse.set_visible(False)
 
-size = (SCREEN_WIDTH, SCREEN_HEIGHT)
+size = (config['screenWidth'], config['screenHeight'])
 black = (0, 0, 0)
 
-#screen = pygame.display.set_mode(size, FULLSCREEN)
-screen = pygame.display.set_mode(size)
+if config['fullScreen']:
+    screen = pygame.display.set_mode(size, FULLSCREEN)
+else:
+    screen = pygame.display.set_mode(size)
 cursor = Cursor()
-font = pygame.font.Font('freesansbold.ttf', 20)
+font = pygame.font.Font('freesansbold.ttf', 10)
 
 # load all needed assets
 loadAssets()
@@ -919,21 +877,23 @@ playIntro()
 # start new game
 game = Game()
 
-a = Animation()
-
 prevTicks = pygame.time.get_ticks()
 ticks = prevTicks + 1
 
 clock = pygame.time.Clock()
+bgRect = Rect(0,0, config['screenWidth'], config['screenHeight'])
 
 while 1:
-    clock.tick(FPS)
+    clock.tick(config['fpsLimit'])
 
     # handle user input
     handleEvents()
 
     # clear screen
     screen.fill(black)
+
+    # draw background
+    screen.blit(assets['bg'], bgRect)
 
     # count number of ticks passed
     ticks = pygame.time.get_ticks()
