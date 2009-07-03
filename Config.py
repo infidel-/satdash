@@ -21,7 +21,7 @@ config['screenWidth'] = 320
 config['screenHeight'] = 240
 
 # animation delay
-config['animationDelay'] = 200
+config['animationDelay'] = 300
 
 # starting time and level
 config['startTime'] = 30000
