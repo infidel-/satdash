@@ -32,7 +32,7 @@ class Animation:
     # set next frame for display
     def nextFrame(self):
         # non-animation
-        if self.numFrames == 1:
+        if self.numFrames <= 1:
             self.frameImage = self.image
             return
 
@@ -46,8 +46,13 @@ class Animation:
         if (self.frame >= self.numFrames):
             self.frame = 0
 
-        r = Rect(32 * self.frame, 0, 32, 32)
+        imr = self.image.get_rect()
+        r = Rect(imr.width * self.frame / self.numFrames, 0, \
+                 imr.width / self.numFrames, imr.height)
 #        print r
+        if (r.x + r.width > imr.width):
+            r = imr
+#            print r, self.image.get_rect(), self.numFrames
         self.frameImage = self.image.subsurface(r)
     pass
 pass

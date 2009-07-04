@@ -5,23 +5,24 @@ global config
 config = dict()
 
 # play music?
-config['playMusic'] = 1
+config['playMusic'] = 0
 
 # play sound?
-config['playSound'] = 1
+config['playSound'] = 0
 
 # fps limit
 config['fpsLimit'] = 60
 
 # full screen?
-config['fullScreen'] = 1
+config['fullScreen'] = 0
 
 # screen dimensions
 config['screenWidth'] = 320
 config['screenHeight'] = 240
 
-# animation delay
+# animation delays
 config['animationDelay'] = 300
+config['animationExplosionDelay'] = 100
 
 # starting time and level
 config['startTime'] = 30000

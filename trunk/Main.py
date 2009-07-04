@@ -3,10 +3,10 @@ TODO:
 - high scores
 
 - combos!
-- explosion animation (first check about general animation)
-- asteroid animation (rotation)
-- game: where player must move objects away from each other so that
-they don't collide
+- asteroid explosion
+- green hand with animation
+- grabbed hand
+- grabbing cursor
 '''
 
 import sys, pygame, random, math
@@ -164,7 +164,6 @@ class WorldObject(Animation):
 
         elif self.type == 'debris':
             self.image = assets['rock']
-            self.numFrames = 1
             self.life = 1
 
         # check for collision
@@ -308,13 +307,18 @@ class WorldObject(Animation):
                 game.addPoints(points)
 
                 # create text
-                e = Particle('text', self.rect.centerx, \
+                e = Particle('text', '', self.rect.centerx, \
                              self.rect.centery - 10, 0, - 0.25)
                 e.setText('+' + str(points))
                 particles.append(e)
 
         # create explosion
-        e = Particle('image', self.rect.left, self.rect.top, self.dx, self.dy)
+        if self.type == 'satellite':
+            e = Particle('image', assets['explosion'], \
+                         self.rect.left, self.rect.top, self.dx, self.dy)
+        elif self.type == 'debris':
+            e = Particle('image', assets['smoke'], \
+                         self.rect.left, self.rect.top, self.dx, self.dy)
         particles.append(e)
 
         # delete object
@@ -415,14 +419,22 @@ class WorldObject(Animation):
             self.fy = 1
         if self.fy <= 0:
             self.fy = config['screenHeight'] - 1
+
+        # spawn trail sprite if damaged
+        if self.type == 'satellite' and \
+           self.life < config['satelliteLife'] and \
+           ((self.life > 1 and random() < 0.01) or \
+            (self.life == 1 and random() < 0.03)):
+            e = Particle('image', assets['explosion'], self.fx, self.fy, 0, 0)
+            e.setTrail()
+            particles.append(e)
+        pass
     pass
 pass
 
 
 # particle class (cpart)
-class Particle:
-    image = None
-    rect = None
+class Particle(Animation):
     type = ''
     text = ''
     startTime = 0
@@ -440,17 +452,14 @@ class Particle:
     trailLength = 0
     trailSpawnTime = 0
 
-    def __init__(self, type, x, y, dx, dy):
+    def __init__(self, type, img, x, y, dx, dy):
         self.startTime = pygame.time.get_ticks()
         self.type = type
 
         if self.type == 'image':
-            self.image = assets['explosion']
-            r = self.image.get_rect()
-
-            self.rect = Rect(x, y, r.width, r.height)
-            self.fx = self.rect.centerx
-            self.fy = self.rect.centery
+            self.fx = x
+            self.fy = y
+            self.setImage(img)
 
             # normalize dir
             m = max(abs(dx), abs(dy))
@@ -467,6 +476,18 @@ class Particle:
             self.dy = dy
     pass
 
+
+    # set image
+    def setImage(self, img):
+        self.image = img
+        self.frameDelay = config['animationExplosionDelay']
+        self.rect = Rect(self.fx, self.fy, self.image.get_rect().height, \
+                         self.image.get_rect().height)
+        self.fx = self.rect.centerx
+        self.fy = self.rect.centery
+    pass
+
+
     # set text
     def setText(self, text):
         self.text = text
@@ -480,15 +501,19 @@ class Particle:
 
 
     # paint this
-    def paint(self):
-        screen.blit(self.image, self.rect)
+    def paint(self, screen):
+        if self.type == 'image':
+            Animation.paint(self, screen)
+
+        elif self.type == 'text':
+            screen.blit(self.image, self.rect)
 
     # set trail var
     def setTrail(self):
         self.isTrail = 1
-        self.image = assets['explosionTrail']
-        self.rect.centerx -= 32
-        self.rect.centery -= 32
+        self.image = assets['smoke']
+        self.rect.centerx -= 16
+        self.rect.centery -= 16
 
 
     # update state
@@ -505,7 +530,7 @@ class Particle:
         if self.type == 'image':
             # spawn trail sprite
             if ticks - self.trailSpawnTime > 200 :
-                e = Particle('image', self.fx, self.fy, 0, 0)
+                e = Particle('image', assets['explosion'], self.fx, self.fy, 0, 0)
                 e.setTrail()
                 particles.append(e)
                 self.trailSpawnTime = ticks
@@ -680,6 +705,7 @@ def loadAssets():
     assets['satSelected'] = pygame.image.load("assets/sat_sel.png")
     assets['explosion'] = pygame.image.load("assets/explosion.png")
     assets['explosionTrail'] = pygame.image.load("assets/explosion_trail.png")
+    assets['smoke'] = pygame.image.load("assets/smoke.png")
     assets['rock'] = pygame.image.load("assets/rock.png")
 
     # sounds
@@ -765,7 +791,7 @@ def paintScreen():
 
     # paint particles
     for e in reversed(particles):
-        e.paint()
+        e.paint(screen)
 
     # paint mouse cursor
     cursor.paint()
@@ -825,7 +851,7 @@ def playIntro():
 
     fontIntro = pygame.font.Font('freesansbold.ttf', 10)
     introText(fontIntro, 
-              ("UFOdeath v0.1", 
+              ("Satellite Dash v0.1", 
                    "Press and hold LEFT MOUSE BUTTON to grab satellites",
                    "Bump satellites into each other to gain points and time", 
                    "Press SPACE to pause game"))
@@ -839,9 +865,10 @@ pass
 
 # outro
 def playOutro():
-    # intro music
-    pygame.mixer.music.load("assets/mus_intro.ogg")
-    pygame.mixer.music.play(-1)
+    # outro music
+    if config['playMusic']:
+        pygame.mixer.music.load("assets/mus_intro.ogg")
+        pygame.mixer.music.play(-1)
 
     fontOutro = pygame.font.Font('freesansbold.ttf', 10)
     introText(fontOutro,
