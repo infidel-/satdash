@@ -1,12 +1,12 @@
 '''
 TODO:
 - high scores
+- bug: pause still counts time
+- bug: when grabbed satellite is destroyed,it is displayed
 
 - combos!
-- asteroid explosion
-- green hand with animation
-- grabbed hand
-- grabbing cursor
+- particles trail from cursor to grabbed satellite
+- grabbing cursor around satellite
 '''
 
 import sys, pygame, random, math
@@ -42,8 +42,9 @@ particles = list()
 
 
 # cursor class (ccur)
-class Cursor:
-    image = None
+class Cursor(Animation):
+    imageNormal = None
+    imagePressed = None
     isPressed = 0
     position = list()
     startTime = 0
@@ -51,18 +52,58 @@ class Cursor:
     # grabbed satellite
     grabbed = None
     
-    def __init__(self):
+    def __init__(self, iNormal, iPressed):
+        self.imageNormal = iNormal
+        self.imagePressed = iPressed
+        self.image = self.imageNormal
+        self.numFrames = 1
         self.position = pygame.mouse.get_pos()
+        self.rect = self.image.get_rect()
+        self.frameDelay = config['animationCursorDelay']
+
 
     # paint mouse cursor
-    def paint(self):
-        rect = self.image.get_rect()
+    def paint(self, screen):
         pos = pygame.mouse.get_pos()
 
-        rect.centerx = pos[0]
-        rect.centery = pos[1]
+        self.rect.centerx = pos[0]
+        self.rect.centery = pos[1]
 
-        screen.blit(self.image, rect)
+        if self.isPressed:
+            Animation.paint(self, screen)
+        else:
+            screen.blit(self.image, self.rect)
+
+
+    # paint pixel trail from cursor to grabbed satellite
+    def paintTrail(self, screen):
+        pos = pygame.mouse.get_pos()
+        ln = math.floor(0.15 * math.sqrt((self.grabbed.fx - pos[0]) * \
+                      (self.grabbed.fx - pos[0]) + \
+                           (self.grabbed.fy - pos[1]) *
+                           (self.grabbed.fy - pos[1])))
+
+        dx = self.grabbed.fx - pos[0]
+        dy = self.grabbed.fy - pos[1]
+        m = max(abs(dx), abs(dy)) / 5
+        dx /= m
+        dy /= m
+
+        xbase = pos[0]
+        ybase = pos[1]
+        for i in xrange(0, int(ln)):
+            xbase += dx
+            ybase += dy
+            self.paintTrailRandom(screen, xbase, ybase)
+            self.paintTrailRandom(screen, xbase, ybase)
+            self.paintTrailRandom(screen, xbase, ybase)
+
+    def paintTrailRandom(self, screen, xbase, ybase):
+        x = xbase - 20 + random() * 40
+        y = ybase - 20 + random() * 40
+        c = choice(config['trailColors'])
+        col = Color(c[0], c[1], c[2])
+        screen.set_at((int(x), int(y)), col)
 
 
     # set pressed state
@@ -71,7 +112,8 @@ class Cursor:
         self.position = pygame.mouse.get_pos()
 
         if self.isPressed:
-            self.image = assets['cursorPressed']
+            self.image = self.imagePressed
+            self.numFrames = 4
             self.startTime = pygame.time.get_ticks()
 
             # check for satellite to grab
@@ -79,7 +121,8 @@ class Cursor:
                 o.checkGrabbed()
 
         else:
-            self.image = assets['cursorNormal']
+            self.image = self.imageNormal
+            self.numFrames = 1
             self.startTime = 0
             self.grabbed = None
 
@@ -251,7 +294,8 @@ class WorldObject(Animation):
         if self.type != 'satellite':
             return 0
         
-        r = cursor.image.get_rect()
+#        r = cursor.image.get_rect()
+        r = cursor.rect
         rect = Rect(cursor.position[0], cursor.position[1], \
                             r.width, r.height)
 
@@ -317,8 +361,10 @@ class WorldObject(Animation):
             e = Particle('image', assets['explosion'], \
                          self.rect.left, self.rect.top, self.dx, self.dy)
         elif self.type == 'debris':
-            e = Particle('image', assets['smoke'], \
+            e = Particle('image', assets['rockExplosion'], \
                          self.rect.left, self.rect.top, self.dx, self.dy)
+            e.frameDelay = config['animationRockExplosionDelay']
+            e.lifeTime = config['rockExplosionLifeTime']
         particles.append(e)
 
         # delete object
@@ -438,6 +484,7 @@ class Particle(Animation):
     type = ''
     text = ''
     startTime = 0
+    lifeTime = config['explosionLifeTime']
 
     # float x,y
     fx = 0.0
@@ -521,13 +568,13 @@ class Particle(Animation):
         global particles
         
         # remove explosion on timeout
-        if ticks - self.startTime > config['explosionTime']:
+        if ticks - self.startTime > self.lifeTime:
             particles.remove(self)
 
         if self.isTrail:
             return
 
-        if self.type == 'image':
+        if self.type == 'image' and self.image == assets['explosion']:
             # spawn trail sprite
             if ticks - self.trailSpawnTime > 200 :
                 e = Particle('image', assets['explosion'], self.fx, self.fy, 0, 0)
@@ -707,6 +754,7 @@ def loadAssets():
     assets['explosionTrail'] = pygame.image.load("assets/explosion_trail.png")
     assets['smoke'] = pygame.image.load("assets/smoke.png")
     assets['rock'] = pygame.image.load("assets/rock.png")
+    assets['rockExplosion'] = pygame.image.load("assets/rock_explosion.png")
 
     # sounds
     if config['playSound']:
@@ -781,6 +829,10 @@ pass
 
 # paint screen
 def paintScreen():
+    # paint trail
+    if cursor.grabbed != None:
+        cursor.paintTrail(screen)
+
     # paint objects
     for o in objects:
         o.paint(screen)
@@ -794,7 +846,7 @@ def paintScreen():
         e.paint(screen)
 
     # paint mouse cursor
-    cursor.paint()
+    cursor.paint(screen)
 
     # paint status panel
     paintStatus()
@@ -806,6 +858,7 @@ def waitForEvent():
     while 1:
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
+                pygame.quit()
                 sys.exit()
 
             elif e.type == pygame.KEYDOWN:
@@ -875,6 +928,7 @@ def playOutro():
               ("GAME OVER",
                "Score: " + str(game.points)))
 
+    pygame.quit()
     sys.exit()
 pass
 
@@ -892,11 +946,13 @@ if config['fullScreen']:
     screen = pygame.display.set_mode(size, FULLSCREEN)
 else:
     screen = pygame.display.set_mode(size)
-cursor = Cursor()
 font = pygame.font.Font('freesansbold.ttf', 10)
 
 # load all needed assets
 loadAssets()
+
+# mouse cursor
+cursor = Cursor(assets['cursorNormal'], assets['cursorPressed'])
 
 # intro stuff
 playIntro()
@@ -912,6 +968,9 @@ bgRect = Rect(0,0, config['screenWidth'], config['screenHeight'])
 
 while 1:
     clock.tick(config['fpsLimit'])
+
+    if config['debugFrameTime']:
+        ticksDebug = pygame.time.get_ticks()
 
     # handle user input
     handleEvents()
@@ -939,6 +998,10 @@ while 1:
 
     # update screen
     pygame.display.flip()
+
+    if config['debugFrameTime']:
+        print (pygame.time.get_ticks() - ticksDebug)
+
 
 # outro stuff - display scores etc
 playOutro()
