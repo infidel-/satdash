@@ -1,9 +1,7 @@
 '''
 TODO:
 - high scores
-- bug: pause still counts time
-- bug: when grabbed satellite is destroyed,it is displayed
-
+- refactoring
 - combos!
 '''
 
@@ -133,6 +131,7 @@ class Cursor(Animation):
             self.image = self.imageNormal
             self.numFrames = 1
             self.startTime = 0
+            self.animGrabbed = None
             self.grabbed = None
 
 
@@ -173,7 +172,6 @@ class Cursor(Animation):
                 self.grabbed.diry = fdy
         pass
     pass
-
 pass
 
 
@@ -311,9 +309,6 @@ class WorldObject(Animation):
         if self.rect.colliderect(rect):
             cursor.grabbed = self
             self.isTouched = 1
-
-#            e = Particle('image', assets['explosion'], \
- #                        self.rect.left, self.rect.top, self.dx, self.dy)
             if config['playSound']:
                 assets['sndGrab'].stop()
                 assets['sndGrab'].play()
@@ -349,6 +344,10 @@ class WorldObject(Animation):
         
         # death
         self.isDead = 1
+
+        # clean grabbed state from cursor
+        if cursor.grabbed == self:
+            cursor.setPressed(0)
 
         if self.type == 'satellite' or obj.type == 'satellite':
             points = 0
@@ -614,7 +613,11 @@ class Game:
     time = config['startTime']
     warnStartTime = 0
 
-    isPaused = False
+    # timer ticks
+    prevTicks = pygame.time.get_ticks()
+    ticks = prevTicks + 1
+
+    #isPaused = False
     isFinished = False
 
     def __init__(self):
@@ -702,16 +705,19 @@ class Game:
 
 
     # update game state (cgamup)
-    def update(self, prevTicks, ticks):
-        # time passed
-        self.time -= (ticks - prevTicks)
+    def update(self):
+        # count number of ticks passed
+        self.ticks = pygame.time.get_ticks()
 
-        if ticks - prevTicks == 0:
+        # time passed
+        self.time -= (self.ticks - self.prevTicks)
+
+        if self.ticks - self.prevTicks == 0:
             return
 
         # warning sound when time is low
-        if self.time <= 5000 and ticks - self.warnStartTime > 500:
-            self.warnStartTime = ticks
+        if self.time <= 5000 and self.ticks - self.warnStartTime > 500:
+            self.warnStartTime = self.ticks
             if config['playSound']:
                 assets['sndTime'].play()
 
@@ -719,15 +725,15 @@ class Game:
         self.checkFinish()
 
         # update cursor
-        cursor.update(ticks)
+        cursor.update(self.ticks)
 
         # update particles
         for p in particles:
-            p.update(ticks)
+            p.update(self.ticks)
 
         # update objects
         for o in objects:
-            o.update(prevTicks, ticks)
+            o.update(self.prevTicks, self.ticks)
 
         # check objects for collisions
         for o in objects:
@@ -745,6 +751,8 @@ class Game:
         if cnt < self.numDebris:
             o = WorldObject('debris', 1)
             objects.append(o)
+
+        self.prevTicks = self.ticks
     pass
 pass
 
@@ -792,8 +800,13 @@ def handleEvents():
                 sys.exit()
 
             if e.key == K_SPACE:
+                #game.isPaused = True
                 introText(font, ("Game is paused.",
                                  "Press any key to continue"))
+
+                # clean ticks because of pause
+                game.prevTicks = pygame.time.get_ticks()
+#                game.isPaused = False
 
             # F12 - toggle fullscreen
 #            elif e.key == K_F12:
@@ -972,9 +985,6 @@ playIntro()
 # start new game
 game = Game()
 
-prevTicks = pygame.time.get_ticks()
-ticks = prevTicks + 1
-
 clock = pygame.time.Clock()
 bgRect = Rect(0,0, config['screenWidth'], config['screenHeight'])
 
@@ -993,17 +1003,12 @@ while 1:
     # draw background
     screen.blit(assets['bg'], bgRect)
 
-    # count number of ticks passed
-    ticks = pygame.time.get_ticks()
-
     # update game state
-    game.update(prevTicks, ticks)
+    game.update()
 
     # game could finish in update()
     if game.isFinished:
         break
-
-    prevTicks = ticks
 
     # paint everything
     paintScreen()
