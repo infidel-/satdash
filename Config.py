@@ -5,10 +5,10 @@ global config
 config = dict()
 
 # play music
-config['playMusic'] = 0
+config['playMusic'] = 1
 
 # play sound
-config['playSound'] = 0
+config['playSound'] = 1
 
 # fps limit
 config['fpsLimit'] = 60
