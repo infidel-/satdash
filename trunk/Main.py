@@ -5,8 +5,6 @@ TODO:
 - bug: when grabbed satellite is destroyed,it is displayed
 
 - combos!
-- particles trail from cursor to grabbed satellite
-- grabbing cursor around satellite
 '''
 
 import sys, pygame, random, math
@@ -51,6 +49,10 @@ class Cursor(Animation):
 
     # grabbed satellite
     grabbed = None
+
+    # grabbed animation
+    animGrabbed = None
+
     
     def __init__(self, iNormal, iPressed):
         self.imageNormal = iNormal
@@ -119,6 +121,13 @@ class Cursor(Animation):
             # check for satellite to grab
             for o in objects:
                 o.checkGrabbed()
+
+            # satellite grabbed, make animation
+            if self.grabbed != None:
+                self.animGrabbed = Animation()
+                self.animGrabbed.image = assets['satSelected']
+                self.animGrabbed.numFrames = 2
+
 
         else:
             self.image = self.imageNormal
@@ -283,8 +292,9 @@ class WorldObject(Animation):
 
         # this object grabbed
         if cursor.grabbed == self:
-            r = Rect(self.rect.left, self.rect.top, 15, 15)
-            screen.blit(assets['satSelected'], r)
+            cursor.animGrabbed.rect.x = self.rect.left
+            cursor.animGrabbed.rect.y = self.rect.top
+            Animation.paint(cursor.animGrabbed, screen)
     pass
 
 
@@ -294,7 +304,6 @@ class WorldObject(Animation):
         if self.type != 'satellite':
             return 0
         
-#        r = cursor.image.get_rect()
         r = cursor.rect
         rect = Rect(cursor.position[0], cursor.position[1], \
                             r.width, r.height)
@@ -302,6 +311,9 @@ class WorldObject(Animation):
         if self.rect.colliderect(rect):
             cursor.grabbed = self
             self.isTouched = 1
+
+#            e = Particle('image', assets['explosion'], \
+ #                        self.rect.left, self.rect.top, self.dx, self.dy)
             if config['playSound']:
                 assets['sndGrab'].stop()
                 assets['sndGrab'].play()

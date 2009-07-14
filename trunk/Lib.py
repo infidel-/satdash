@@ -9,7 +9,7 @@ from Config import config
 # animation class
 
 class Animation:
-    rect = None
+    rect = Rect(0,0,0,0)
     image = None
     frameImage = None
     frame = -1
