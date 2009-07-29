@@ -1,5 +1,26 @@
 '''
 TODO:
+- find more suitable font
+- intro text
+
+Welcome, Glarxz. As you know we are planning invasion of the planet Earth and
+subsequent enslavement of all its unwary natives. You will be responsible
+for the important task of sabotaging Earthling satellites on Sector 9 of
+the Earth orbit. Remember, the more satellites you will destroy the more
+your bonus will be. Here is your Magnetic Attractor, Corporal.
+
+- outro text depending on ending level
+
+1 What?!? Your days are numbered, Corporal!
+2 Lousy job, Corporal.
+3 Could have been better, Corporal.
+4 Work better, Corporal.
+5 And here is your bonus, Corporal.
+6 You did a fine job, Corporal.
+7 Excellect work, Corporal!
+8 I'm sure your promotion awaits you, Corporal.
+9 The Earth will be ours, Corporal!
+
 - high scores
 - refactoring
 - combos!
