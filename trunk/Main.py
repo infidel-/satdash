@@ -783,19 +783,19 @@ def loadAssets():
     global assets
 
     # images
-    assets['bg'] = pygame.image.load("assets/bg.png")
-    assets['cursorNormal'] = pygame.image.load("assets/cursor.png")
-    assets['cursorPressed'] = pygame.image.load("assets/cursor_pressed.png")
-    assets['dir'] = pygame.image.load("assets/dir.png")
-    assets['satellite'] = pygame.image.load("assets/sat1.png")
-    assets['satelliteDamaged1'] = pygame.image.load("assets/sat1_dmg1.png")
-    assets['satelliteDamaged2'] = pygame.image.load("assets/sat1_dmg2.png")
-    assets['satSelected'] = pygame.image.load("assets/sat_sel.png")
-    assets['explosion'] = pygame.image.load("assets/explosion.png")
-    assets['explosionTrail'] = pygame.image.load("assets/explosion_trail.png")
-    assets['smoke'] = pygame.image.load("assets/smoke.png")
-    assets['rock'] = pygame.image.load("assets/rock.png")
-    assets['rockExplosion'] = pygame.image.load("assets/rock_explosion.png")
+    assets['bg'] = pygame.image.load("assets/bg.png").convert()
+    assets['cursorNormal'] = pygame.image.load("assets/cursor.png").convert()
+    assets['cursorPressed'] = pygame.image.load("assets/cursor_pressed.png").convert()
+    assets['dir'] = pygame.image.load("assets/dir.png").convert()
+    assets['satellite'] = pygame.image.load("assets/sat1.png").convert()
+    assets['satelliteDamaged1'] = pygame.image.load("assets/sat1_dmg1.png").convert()
+    assets['satelliteDamaged2'] = pygame.image.load("assets/sat1_dmg2.png").convert()
+    assets['satSelected'] = pygame.image.load("assets/sat_sel.png").convert()
+    assets['explosion'] = pygame.image.load("assets/explosion.png").convert()
+    assets['explosionTrail'] = pygame.image.load("assets/explosion_trail.png").convert()
+    assets['smoke'] = pygame.image.load("assets/smoke.png").convert()
+    assets['rock'] = pygame.image.load("assets/rock.png").convert()
+    assets['rockExplosion'] = pygame.image.load("assets/rock_explosion.png").convert()
 
     # sounds
     if config['playSound']:
@@ -868,7 +868,7 @@ def paintStatus():
     size = font.size(text)
     
     surf = font.render(text, 1, (255, 255, 255, 0));
-    r = Rect(10, config['screenHeight'] - size[1] - 5, size[0], size[1])
+    r = (10, config['screenHeight'] - size[1] - 5)
     screen.blit(surf, r)
 pass
 
@@ -926,9 +926,9 @@ def introText(fontIntro, textList):
     for text in textList:
         size = fontIntro.size(text)
         surf = fontIntro.render(text, 1, (255, 255, 255, 0));
-        r = Rect((config['screenWidth'] - size[0]) / 2, \
-                 (config['screenHeight'] - size[1] - totalHeight + height * cnt) / 2, \
-                 size[0], size[1])
+        r = ((config['screenWidth'] - size[0]) / 2, \
+             (config['screenHeight'] - size[1] - \
+              totalHeight + height * cnt) / 2)
         screen.blit(surf, r)
 
         cnt += 1
@@ -993,6 +993,12 @@ if config['fullScreen']:
 else:
     screen = pygame.display.set_mode(size)
 font = pygame.font.Font('freesansbold.ttf', 10)
+font2 = BitmapFont("geebeeyay-8x8.png", 8, 8, \
+                   " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+font2.paint(screen, (10, 10), "CRYPTO, COMMUNICATIONS ESTABLISHED!")
+pygame.display.flip()
+waitForEvent()
 
 # load all needed assets
 loadAssets()
@@ -1007,7 +1013,6 @@ playIntro()
 game = Game()
 
 clock = pygame.time.Clock()
-bgRect = Rect(0,0, config['screenWidth'], config['screenHeight'])
 
 while 1:
     clock.tick(config['fpsLimit'])
@@ -1022,7 +1027,7 @@ while 1:
     screen.fill(black)
 
     # draw background
-    screen.blit(assets['bg'], bgRect)
+    screen.blit(assets['bg'], (0, 0))
 
     # update game state
     game.update()

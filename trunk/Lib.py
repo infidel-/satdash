@@ -56,3 +56,43 @@ class Animation:
         self.frameImage = self.image.subsurface(r)
     pass
 pass
+
+
+# bitmap font support
+
+class BitmapFont:
+    image = None
+    charWidth = 8
+    charHeight = 8
+    charMap = None
+
+    def __init__(self, fileName, width, height, charMap):
+        self.image = pygame.image.load(fileName).convert()
+        self.charWidth = width
+        self.charHeight = height
+        self.charMap = charMap
+    pass
+
+    # size of text
+    def size(self, text):
+        return (200, 200)
+    pass
+
+    # paint text into surface
+    def paint(self, screen, pos, text):
+        x = 0
+        for c in text:
+            # find char in string
+            cx = self.charMap.find(c)
+            if cx == -1:
+                print "No such char ", c
+                continue
+
+            r = Rect(cx * self.charWidth, 0, \
+                     self.charWidth, self.charHeight)
+            cimg = self.image.subsurface(r)
+            p = (pos[0] + x, pos[1])
+            screen.blit(cimg, p)
+            x += self.charWidth
+    pass
+pass
