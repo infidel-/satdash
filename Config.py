@@ -5,16 +5,16 @@ global config
 config = dict()
 
 # play music
-config['playMusic'] = 1
+config['playMusic'] = 0
 
 # play sound
-config['playSound'] = 1
+config['playSound'] = 0
 
 # fps limit
 config['fpsLimit'] = 60
 
 # full screen
-config['fullScreen'] = 1
+config['fullScreen'] = 0
 
 # screen dimensions
 config['screenWidth'] = 320
