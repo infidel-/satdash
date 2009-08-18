@@ -962,7 +962,7 @@ if config['fullScreen']:
     screen = pygame.display.set_mode(size, FULLSCREEN)
 else:
     screen = pygame.display.set_mode(size)
-font = BitmapFont("geebeeyay-8x8.png", 8, 8, \
+font = BitmapFont("assets/geebeeyay-8x8.png", 8, 8, \
                    " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 # load all needed assets
