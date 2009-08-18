@@ -1,29 +1,5 @@
 '''
-TODO:
-- find more suitable font
-- intro text
-
-Welcome, Glarxz. As you know we are planning invasion of the planet Earth and
-subsequent enslavement of all its unwary natives. You will be responsible
-for the important task of sabotaging Earthling satellites on Sector 9 of
-the Earth orbit. Remember, the more satellites you will destroy the more
-your bonus will be. Here is your Magnetic Attractor, Corporal.
-
-- outro text depending on ending level
-
-1 What?!? Your days are numbered, Corporal!
-2 Lousy job, Corporal.
-3 Could have been better, Corporal.
-4 Work better, Corporal.
-5 And here is your bonus, Corporal.
-6 You did a fine job, Corporal.
-7 Excellect work, Corporal!
-8 I'm sure your promotion awaits you, Corporal.
-9 The Earth will be ours, Corporal!
-
-- high scores
-- refactoring
-- combos!
+Satellite Dash v0.1
 '''
 
 import sys, pygame, random, math
@@ -570,22 +546,19 @@ class Particle(Animation):
     # set text
     def setText(self, text):
         self.text = text
-
-        size = font.size(self.text)
-        self.image = font.render(self.text, 1, (0, 255, 0, 0),
-                                 (50, 50, 50, 200));
-        self.rect = Rect(self.fx - size[0] / 2, self.fy - size[1] / 2, \
-                 size[0], size[1])
+        self.rect = Rect(self.fx - 10, self.fy - 10, 0, 0)
     pass
 
 
     # paint this
     def paint(self, screen):
+        global font
+
         if self.type == 'image':
             Animation.paint(self, screen)
 
         elif self.type == 'text':
-            screen.blit(self.image, self.rect)
+            font.paint(screen, (self.rect.x, self.rect.y), self.text)
 
     # set trail var
     def setTrail(self):
@@ -822,8 +795,8 @@ def handleEvents():
 
             if e.key == K_SPACE:
                 #game.isPaused = True
-                introText(font, ("Game is paused.",
-                                 "Press any key to continue"))
+                introText(("Game is paused.",
+                    "Press any key to continue"))
 
                 # clean ticks because of pause
                 game.prevTicks = pygame.time.get_ticks()
@@ -865,11 +838,8 @@ def paintStatus():
         text += str(int(game.time / 1000))
     else:
         text += '%.1f' % float(game.time / 1000.0)
-    size = font.size(text)
     
-    surf = font.render(text, 1, (255, 255, 255, 0));
-    r = (10, config['screenHeight'] - size[1] - 5)
-    screen.blit(surf, r)
+    font.paint(screen, (10, config['screenHeight'] - 13), text.upper())
 pass
 
 
@@ -915,23 +885,22 @@ pass
 
 
 # draw centered intro text 
-def introText(fontIntro, textList):
+def introText(textList):
+    global font
+
     # clear screen
     screen.fill(black)
 
-    height = fontIntro.get_height() + 20
+    height = font.charHeight + 3
     totalHeight = height * len(textList)
 
     cnt = 0
+    y = (config['screenHeight'] - totalHeight + height * cnt) / 2
     for text in textList:
-        size = fontIntro.size(text)
-        surf = fontIntro.render(text, 1, (255, 255, 255, 0));
-        r = ((config['screenWidth'] - size[0]) / 2, \
-             (config['screenHeight'] - size[1] - \
-              totalHeight + height * cnt) / 2)
-        screen.blit(surf, r)
-
+        w = font.charWidth * len(text)
+        font.paint(screen, ((config['screenWidth'] - w) / 2, y), text.upper())
         cnt += 1
+        y += height
     pass
 
     # update screen
@@ -948,12 +917,15 @@ def playIntro():
         pygame.mixer.music.load("assets/mus_intro.ogg")
         pygame.mixer.music.play(-1)
 
-    fontIntro = pygame.font.Font('freesansbold.ttf', 10)
-    introText(fontIntro, 
-              ("Satellite Dash v0.1", 
-                   "Press and hold LEFT MOUSE BUTTON to grab satellites",
-                   "Bump satellites into each other to gain points and time", 
-                   "Press SPACE to pause game"))
+    introText(("Satellite Dash v0.1",
+               "",
+        "Bump satellites into each other",
+        "to gain points and time",
+        "",
+        "Press and hold LMB to grab satellites",
+        "Press SPACE to pause game"
+               "",
+               "Have fun!"))
 
     # ingame music
     if config['playMusic']:
@@ -969,10 +941,8 @@ def playOutro():
         pygame.mixer.music.load("assets/mus_intro.ogg")
         pygame.mixer.music.play(-1)
 
-    fontOutro = pygame.font.Font('freesansbold.ttf', 10)
-    introText(fontOutro,
-              ("GAME OVER",
-               "Score: " + str(game.points)))
+    introText(("GAME OVER",
+        "Score: " + str(game.points)))
 
     pygame.quit()
     sys.exit()
@@ -992,13 +962,8 @@ if config['fullScreen']:
     screen = pygame.display.set_mode(size, FULLSCREEN)
 else:
     screen = pygame.display.set_mode(size)
-font = pygame.font.Font('freesansbold.ttf', 10)
-font2 = BitmapFont("geebeeyay-8x8.png", 8, 8, \
+font = BitmapFont("geebeeyay-8x8.png", 8, 8, \
                    " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-font2.paint(screen, (10, 10), "CRYPTO, COMMUNICATIONS ESTABLISHED!")
-pygame.display.flip()
-waitForEvent()
 
 # load all needed assets
 loadAssets()
@@ -1044,7 +1009,6 @@ while 1:
 
     if config['debugFrameTime']:
         print (pygame.time.get_ticks() - ticksDebug)
-
 
 # outro stuff - display scores etc
 playOutro()

@@ -1,24 +1,29 @@
 # config file
 
 global config
-
 config = dict()
 
 # play music
-config['playMusic'] = 0
+config['playMusic'] = 1
 
 # play sound
-config['playSound'] = 0
+config['playSound'] = 1
 
 # fps limit
 config['fpsLimit'] = 60
 
 # full screen
-config['fullScreen'] = 0
+config['fullScreen'] = 1
 
 # screen dimensions
 config['screenWidth'] = 320
 config['screenHeight'] = 240
+
+
+
+################################################################
+# anything below this line is game-specific
+# don't edit unless you know what you're doing
 
 # animation delays and lifetimes
 config['animationDelay'] = 300
