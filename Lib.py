@@ -85,7 +85,7 @@ class BitmapFont:
             # find char in string
             cx = self.charMap.find(c)
             if cx == -1:
-                print "No such char ", c
+                print "No such char", c
                 continue
 
             r = Rect(cx * self.charWidth, 0, \
